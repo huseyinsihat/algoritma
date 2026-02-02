@@ -1474,7 +1474,6 @@ def update_edge(edge_id: str, label: str) -> None:
     # İP-5: History'ye işlemi kaydet
     st.session_state.history_manager.push(st.session_state.code_text, st.session_state.flow_state, f"update_edge({edge_id})")
     st.rerun()
-    st.rerun()
 
 
 def update_edge_type(edge_id: str, edge_type: str) -> None:
@@ -2037,7 +2036,7 @@ def edge_builder() -> None:
         add_edge(source, target, label.strip() if label else None, edge_type=edge_type)
 
 def main() -> None:
-    st.title("Sürükle-bırak tuval + çift yönlü Mermaid senkronizasyon")
+    st.title("Pratik Akış Şeması")
     st.caption("Hüseyin SIHAT tarafından eğitsel faaliyetler için hazırlanmıştır.")
 
     # İŞ PAKETİ 9: Klavye Kısayolları [ENHANCED]
@@ -2243,7 +2242,10 @@ def main() -> None:
                         st.session_state.last_edit_source = None
 
             st.divider()
-            with st.expander("Bağlantı ve Özellikler", expanded=False):
+            with st.expander(
+                "🧰 Bağlantı ve Özellikler",
+                expanded=bool(st.session_state.get("selected_node_id") or st.session_state.get("selected_edge_id")),
+            ):
                 edge_builder()
                 st.divider()
                 properties_panel()
