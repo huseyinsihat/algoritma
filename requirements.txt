@@ -45,3 +45,4 @@ pylint>=2.17.0
 # Optional: For Jetson deployment
 # tensorrt>=8.5.0  # Install separately on Jetson
 # pycuda>=2022.1  # For CUDA operations
+numpy<2.0.0
