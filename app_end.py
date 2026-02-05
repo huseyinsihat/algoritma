@@ -4318,6 +4318,7 @@ def sync_selection_from_js(flow_state: StreamlitFlowState) -> None:
         st.session_state.selected_node_id = None
         st.session_state.selected_edge_id = None
         st.session_state.last_active_node_id = None
+        st.session_state.auto_connect_anchor = None
         if hasattr(flow_state, "selected_id"):
             try:
                 flow_state.selected_id = None  # type: ignore[attr-defined]
@@ -4330,6 +4331,10 @@ def sync_selection_from_js(flow_state: StreamlitFlowState) -> None:
         st.session_state.selected_node_id = js_id
         st.session_state.selected_edge_id = None
         st.session_state.last_active_node_id = js_id
+        if st.session_state.get("auto_connect"):
+            st.session_state.auto_connect_anchor = js_id
+        else:
+            st.session_state.auto_connect_anchor = None
 
 
 def apply_js_selection() -> None:
@@ -4364,6 +4369,18 @@ def update_selection_from_state(flow_state: StreamlitFlowState) -> None:
     
     # Hızlı seçim - tek tıkla çalışsın
     if selected_id in node_ids:
+        anchor = st.session_state.get("auto_connect_anchor")
+        if (
+            st.session_state.get("auto_connect")
+            and anchor
+            and anchor in node_ids
+            and selected_id != anchor
+        ):
+            if st.session_state.selected_node_id != anchor:
+                st.session_state.selected_node_id = anchor
+                st.session_state.selected_edge_id = None
+                st.session_state.last_active_node_id = anchor
+            return
         if st.session_state.selected_node_id != selected_id:
             st.session_state.selected_node_id = selected_id
             st.session_state.selected_edge_id = None
@@ -6099,9 +6116,13 @@ def render_toolbar(container: st.delta_generator.DeltaGenerator) -> None:
         # Aksi halde bağımsız düğüm oluştur
         connect_from = None
         if st.session_state.get("auto_connect"):
-            selected = st.session_state.get("selected_node_id")
-            if selected and find_node(selected) is not None:
-                connect_from = selected
+            anchor = st.session_state.get("auto_connect_anchor")
+            if anchor and find_node(anchor) is not None:
+                connect_from = anchor
+            else:
+                selected = st.session_state.get("selected_node_id")
+                if selected and find_node(selected) is not None:
+                    connect_from = selected
         if connect_from and find_node(connect_from) is not None:
             # Seçili düğüm varsa, ona bağla
             add_node(kind, label_override=label, connect_from=connect_from)
