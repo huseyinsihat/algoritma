@@ -95,6 +95,11 @@ DEFAULT_DIRECTION = "TD"  # TD, LR, RL, BT
 DEFAULT_MODE = "Basit"
 DEFAULT_LAYOUT_MODE = "Otomatik (Ağaç)"
 DEFAULT_EXPORT_FORMAT = "PNG"
+DEFAULT_GLOBAL_NODE_COLORS = {
+    "bg": "#F1F5F9",
+    "border": "#334155",
+    "text": "#0F172A",
+}
 
 DEFAULT_CODE = """flowchart TD
     start([Başla])
@@ -333,6 +338,9 @@ EDGE_STYLE_OPTIONS = {
     "❌ Çarpı Uç": {"type": "smoothstep", "variant": "cross"},
 }
 
+# Bağlantı tipleri için sabit sıralama
+EDGE_STYLE_ORDER: Tuple[str, ...] = tuple(EDGE_STYLE_OPTIONS.keys())
+
 EDGE_COLOR_OPTIONS = {
     "Mavi": "#2563EB",
     "Yeşil": "#10B981",
@@ -392,7 +400,7 @@ TIPS = [
     "Karar düğümlerinde en az iki çıkış oluştur.",
     "Akış yönünü Ayarlar sekmesinden değiştirebilirsiniz.",
     "Uzman modda sağ tık menüsü daha hızlı düzenleme sağlar.",
-    "Şablonlarla hızlı başlangıç yapıp düzenleyebilirsiniz.",
+    "Örnek akışlardan ilham alıp kendi adımlarını ekleyebilirsiniz.",
     "PNG/SVG dışa aktarım için ölçek ayarını büyütebilirsiniz.",
     "Bağımsız düğümler modunda ok çizilmez; düğümler tipleriyle üretilir.",
     "Akış şemasında bağlantısız düğüm kalmamasına dikkat edin.",
@@ -533,6 +541,15 @@ NODE_KIND = {
         "text": "#0F172A",
         "shape": "rect",
     },
+    "decision": {
+        "label": "Karar",
+        "icon": "❓",
+        "default": "Karar",
+        "bg": "#FFE7A3",
+        "border": "#D97706",
+        "text": "#7C2D12",
+        "shape": "diamond",
+    },
     "io": {
         "label": "Giriş/Çıkış",
         "icon": "⌨️",
@@ -542,14 +559,50 @@ NODE_KIND = {
         "text": "#1E3A8A",
         "shape": "parallelogram",
     },
-    "decision": {
-        "label": "Karar",
-        "icon": "❓",
-        "default": "Karar",
-        "bg": "#FFE7A3",
-        "border": "#D97706",
-        "text": "#7C2D12",
-        "shape": "diamond",
+    "document": {
+        "label": "Belge",
+        "icon": "📄",
+        "default": "Belge",
+        "bg": "#FFF7ED",
+        "border": "#F97316",
+        "text": "#9A3412",
+        "shape": "document",
+    },
+    "multi_document": {
+        "label": "Çoklu Belgeler",
+        "icon": "📑",
+        "default": "Çoklu Belgeler",
+        "bg": "#FFF7ED",
+        "border": "#F97316",
+        "text": "#9A3412",
+        "shape": "multi_document",
+    },
+    "data_storage": {
+        "label": "Veri Deposu",
+        "icon": "🗃️",
+        "default": "Veri Deposu",
+        "bg": "#DCFCE7",
+        "border": "#16A34A",
+        "text": "#166534",
+        "shape": "data_storage",
+    },
+    "internal_storage": {
+        "label": "Dahili Depo",
+        "icon": "🧠",
+        "default": "Dahili Depo",
+        "bg": "#DCFCE7",
+        "border": "#15803D",
+        "text": "#166534",
+        "shape": "internal_storage",
+    },
+    "tape_data": {
+        "label": "Bant Veri",
+        "icon": "📼",
+        "default": "Bant Veri",
+        "bg": "#DCFCE7",
+        "border": "#16A34A",
+        "text": "#166534",
+        "shape": "tape_data",
     },
     "subprocess": {
         "label": "Alt Süreç",
@@ -568,6 +621,42 @@ NODE_KIND = {
         "border": "#1E40AF",
         "text": "#1E3A8A",
         "shape": "database",
+    },
+    "display": {
+        "label": "Görüntü",
+        "icon": "🖥️",
+        "default": "Görüntü",
+        "bg": "#FEF3C7",
+        "border": "#D97706",
+        "text": "#92400E",
+        "shape": "display",
+    },
+    "manual_operation": {
+        "label": "Manuel İşlem",
+        "icon": "✋",
+        "default": "Manuel İşlem",
+        "bg": "#FEF3C7",
+        "border": "#D97706",
+        "text": "#92400E",
+        "shape": "manual_operation",
+    },
+    "merge": {
+        "label": "Birleştir",
+        "icon": "🔻",
+        "default": "Birleştir",
+        "bg": "#FEF3C7",
+        "border": "#D97706",
+        "text": "#92400E",
+        "shape": "merge",
+    },
+    "manual_input": {
+        "label": "Manuel Giriş",
+        "icon": "✍️",
+        "default": "Manuel Giriş",
+        "bg": "#FEF3C7",
+        "border": "#D97706",
+        "text": "#92400E",
+        "shape": "manual_input",
     },
     "connector": {
         "label": "Bağlantı",
@@ -607,8 +696,16 @@ NODE_KIND = {
     },
 }
 
+# Düğüm türleri için sabit sıralama
+NODE_KIND_ORDER: Tuple[str, ...] = tuple(NODE_KIND.keys())
+
+def node_kind_label(kind: str) -> str:
+    """Düğüm tipini Türkçe olarak döndürür."""
+    spec = NODE_KIND.get(kind, NODE_KIND["process"])
+    return str(spec.get("label", kind))
+
 # AI üretiminde zorunlu tutulacak düğüm türleri (akış modu için çekirdek set)
-AI_CORE_KINDS: Tuple[str, ...] = ("terminal", "process", "io", "decision")
+AI_REQUIRED_BASE: Tuple[str, ...] = ("terminal", "process", "decision")
 AI_EXTRA_KINDS: Tuple[str, ...] = (
     "subprocess",
     "database",
@@ -617,8 +714,35 @@ AI_EXTRA_KINDS: Tuple[str, ...] = (
     "loop",
     "function",
 )
-AI_REQUIRED_KINDS: Tuple[str, ...] = AI_CORE_KINDS
-AI_MIN_NODES = 6
+# Konu açıkça gerektirmedikçe IO düğümü zorunlu değildir.
+AI_IO_HINTS: Tuple[str, ...] = (
+    "girdi",
+    "çıktı",
+    "cikti",
+    "input",
+    "output",
+    "form",
+    "veri",
+    "dosya",
+    "belge",
+    "rapor",
+    "liste",
+)
+AI_MIN_NODES_BASE = 5
+AI_MIN_NODES_WITH_IO = 6
+
+# "İşlem" gibi genel süreç etiketlerini anlamlı aksiyonlara dönüştürmek için
+DEFAULT_ACTION_POOL: Tuple[str, ...] = (
+    "Hazırlık Yap",
+    "Bilgi Topla",
+    "Kontrol Et",
+    "Uygula",
+    "Onayla",
+    "Kaydet",
+    "Güncelle",
+    "Bildirim Gönder",
+    "Tamamla",
+)
 
 # Bağımsız düğüm üretimi için hedef aralık
 FREE_NODES_MIN = 6
@@ -628,6 +752,15 @@ FREE_KIND_CYCLE: Tuple[str, ...] = (
     "process",
     "io",
     "decision",
+    "document",
+    "multi_document",
+    "display",
+    "manual_input",
+    "manual_operation",
+    "merge",
+    "data_storage",
+    "internal_storage",
+    "tape_data",
     "subprocess",
     "database",
     "connector",
@@ -642,6 +775,15 @@ MERMAID_NODE_TEMPLATES = {
     "process": "{id}[{label}]",
     "io": "{id}[/ {label} /]",
     "decision": "{id}{{{label}}}",
+    "document": "{id}[{label}]:::document",
+    "multi_document": "{id}[{label}]:::multi_document",
+    "data_storage": "{id}[( {label} )]:::data_storage",
+    "internal_storage": "{id}[{label}]:::internal_storage",
+    "tape_data": "{id}[{label}]:::tape_data",
+    "display": "{id}[{label}]:::display",
+    "manual_operation": "{id}[{label}]:::manual_operation",
+    "merge": "{id}[{label}]:::merge",
+    "manual_input": "{id}[/ {label} /]:::manual_input",
     "subprocess": "{id}[[{label}]]",
     "database": "{id}[( {label} )]",
     "connector": "{id}(({label}))",
@@ -655,6 +797,15 @@ EXPORT_NODE_TEMPLATES = {
     "process": "{id}[{label}]",
     "io": "{id}[/ {label} /]",
     "decision": "{id}{{{label}}}",
+    "document": "{id}[{label}]",
+    "multi_document": "{id}[{label}]",
+    "data_storage": "{id}[( {label} )]",
+    "internal_storage": "{id}[{label}]",
+    "tape_data": "{id}[{label}]",
+    "display": "{id}[{label}]",
+    "manual_operation": "{id}[{label}]",
+    "merge": "{id}[{label}]",
+    "manual_input": "{id}[/ {label} /]",
     "subprocess": "{id}[[{label}]]",
     "database": "{id}[( {label} )]",
     "connector": "{id}(({label}))",
@@ -679,7 +830,7 @@ USER_MODES = {
         "show_controls": True,
         "show_minimap": True,
         "enable_context_menus": True,
-        "show_templates": True,
+        "show_templates": False,
         "allow_edge_style": True,
         "export_formats": ["Mermaid", "PNG", "SVG", "JSON", "PDF"],
         "palette": list(NODE_KIND.keys()),
@@ -882,6 +1033,8 @@ def serialize_nodes(nodes: List[StreamlitFlowNode]) -> List[dict]:
     out: List[dict] = []
     for n in nodes:
         style = getattr(n, "style", {}) or {}
+        data = getattr(n, "data", None) or {}
+        colors = normalize_color_overrides(data.get("colors") if isinstance(data, dict) else None)
         out.append(
             {
                 "id": n.id,
@@ -894,6 +1047,8 @@ def serialize_nodes(nodes: List[StreamlitFlowNode]) -> List[dict]:
                 "width": parse_style_width(style, fallback=160),
             }
         )
+        if colors:
+            out[-1]["colors"] = colors
     return out
 
 
@@ -925,6 +1080,7 @@ def build_state_from_snapshot(node_snapshot: List[dict], edge_snapshot: List[dic
         pos_list = nd.get("pos") or [0, 0]
         pos = (float(pos_list[0]), float(pos_list[1]))
         width = safe_int(nd.get("width"), 160)
+        colors = normalize_color_overrides(nd.get("colors") if isinstance(nd.get("colors"), dict) else None)
 
         nodes.append(
             make_node(
@@ -935,6 +1091,7 @@ def build_state_from_snapshot(node_snapshot: List[dict], edge_snapshot: List[dic
                 width=width,
                 source_position=str(nd.get("source_position") or "bottom"),
                 target_position=str(nd.get("target_position") or "top"),
+                colors=colors,
             )
         )
 
@@ -1079,6 +1236,10 @@ def auto_save_to_file() -> None:
             "selected_task": st.session_state.selected_task,
             "show_rubric": st.session_state.show_rubric,
             "show_pseudocode": st.session_state.show_pseudocode,
+            "global_node_colors_enabled": st.session_state.get("global_node_colors_enabled", False),
+            "global_node_bg": st.session_state.get("global_node_bg"),
+            "global_node_border": st.session_state.get("global_node_border"),
+            "global_node_text": st.session_state.get("global_node_text"),
             "timestamp": int(time.time()),
         }
         AUTOSAVE_FILE.write_text(json.dumps(save_data, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -1165,6 +1326,18 @@ def show_recovery_banner() -> None:
                 st.session_state.show_pseudocode = bool(
                     autosave.get("show_pseudocode", st.session_state.show_pseudocode)
                 )
+                st.session_state.global_node_colors_enabled = bool(
+                    autosave.get("global_node_colors_enabled", st.session_state.global_node_colors_enabled)
+                )
+                st.session_state.global_node_bg = str(
+                    autosave.get("global_node_bg") or st.session_state.global_node_bg
+                )
+                st.session_state.global_node_border = str(
+                    autosave.get("global_node_border") or st.session_state.global_node_border
+                )
+                st.session_state.global_node_text = str(
+                    autosave.get("global_node_text") or st.session_state.global_node_text
+                )
 
                 if st.session_state.ai_mode == "Şema (Oklu)":
                     st.session_state.ai_mode = "Akış Şeması"
@@ -1209,7 +1382,7 @@ def generate_flow_with_ai(prompt: str, api_key: str, model: str = "llama-3.3-70b
 
     client = Groq(api_key=api_key)
     
-    system_prompt = """Sen profesyonel bir akış şeması uzmanısın. Kullanıcının verdiği konuya uygun, GENİŞ, DETAYLI ve gerçekçi bir akış şeması oluştur.
+    system_prompt = """Sen profesyonel bir akış şeması uzmanısın. Kullanıcının verdiği konuya uygun, SADE, NET ve ekranı kalabalıklaştırmayan bir akış şeması oluştur.
 
 KRİTİK KURALLAR:
 
@@ -1219,7 +1392,10 @@ KRİTİK KURALLAR:
    - Son olarak bağlantıları yaz
    - HER DÜĞÜM MUTLAKA bir bağlantıya sahip olmalı (bağlantısız düğüm YASAK!)
 
-2. DÜĞÜM TİPLERİ - Doğru Şekil Kullan (Konuya uygunsa farklı türleri kullan):
+2. DÜĞÜM TİPLERİ - Doğru Şekil Kullan:
+   - Varsayılan olarak Terminal, İşlem ve Karar kullan.
+   - Giriş/Çıkış (IO) sadece konu açıkça gerektiriyorsa kullan.
+   - Alt süreç, veritabanı, bağlantı, not, döngü, fonksiyon gibi türleri ancak gerçekten gerekliyse kullan.
    
    Terminal (Başla/Bitir): ([...])
    s([Başla: Okula Gidiş])
@@ -1231,11 +1407,9 @@ KRİTİK KURALLAR:
    
    Karar (Koşul/Soru): {...}
    d1{Servis Var mı?}
-   d2{Hava Yağmurlu mu?}
    
    Giriş/Çıkış: [/...../]
-   io1[/Alarm Çaldı/]
-   io2[/Okula Varıldı/]
+   io1[/Bilgi Al/]
    
    Alt Süreç: [[...]]
    sp1[[Duş Al ve Giyin]]
@@ -1257,10 +1431,12 @@ KRİTİK KURALLAR:
 
 3. ETİKET KURALLARI:
    - Doğal, anlaşılır Türkçe
-   - 2-5 kelime arası
+   - İngilizce etiket KULLANMA (Start/End/Yes/No gibi)
+   - 2-5 kelime arası (gerekirse 6)
    - p1, d1, io1 gibi KODLAR ETİKETTE GÖRÜNMESİN
    - Konuya özel, gerçekçi adımlar
-   - ASLA "İşlem", "Adım", "Kontrol", "Uygula" gibi GENEL etiketler kullanma
+   - ASLA "İşlem" etiketi kullanma; her işlem fiil + nesne içermeli (örn: "Kahvaltı Yap")
+   - "Adım", "Kontrol", "Uygula" gibi GENEL etiketler kullanma
    - Her etiket benzersiz olmalı (tekrar etme)
    - Karar etiketleri soru şeklinde bitmeli (… mı/mi?)
 
@@ -1268,72 +1444,67 @@ KRİTİK KURALLAR:
    - Normal ok: -->
    - Karar dalları: -->|Evet| ve -->|Hayır|
    - Döngü: -->|Tekrar| veya -->|Devam|
+   - Dalları kısa tut ve tekrar birleşsin
    - Gereksiz çapraz bağlantı yapma; akışı sıralı ve okunur tut
    - Karar dışındaki bağlantılara etiket yazma
+   - "Yes/No" KULLANMA, yalnızca "Evet/Hayır" kullan
 
-5. DÜĞÜM SAYISI - KONUYA GÖRE GENİŞLET:
-   - Basit konular (diş fırçalama): 6-8 düğüm
-   - Orta konular (okula gidiş, alışveriş): 8-10 düğüm
-   - Karmaşık konular (ATM, kayıt): 10-12 düğüm
-   - Konuya uygun, tekrarsız ve gerçekçi adımlar üret
+5. DÜĞÜM SAYISI - SADELEŞTİR:
+   - Basit konular: 5-7 düğüm
+   - Orta konular: 7-9 düğüm
+   - Karmaşık konular: 9-11 düğüm
+   - En fazla 2 karar; çoğu durumda 1 karar yeterli
+   - Mikro adımları birleştir, aynı amaca hizmet eden ardışık adımları tek süreçte topla
 
-6. İYİ AKIŞ ŞEMASININı ÖZELLİKLERİ:
-   - En az 1 karar noktası olmalı
+6. İYİ AKIŞ ŞEMASININ ÖZELLİKLERİ:
    - Başlangıç ve bitiş açık olmalı
    - Tüm olası durumlar kapsamalı
    - Gerçekçi ve mantıklı adımlar
+   - Görsel düzen sade ve örneklerdeki gibi hizalı olmalı (üstten alta, minimum çapraz)
 
-ÖRNEK 1 - OKULA GİDİŞ (8 DÜĞÜM):
+ÖRNEK 1 - OKULA GİDİŞ (7 DÜĞÜM):
 flowchart TD
     s([Başla: Okula Gidiş])
-    io1[/Alarm Çaldı/]
-    p1[Kalk ve Hazırlan]
+    p1[Uyan ve Hazırlan]
     p2[Kahvaltı Yap]
     d1{Servis Var mı?}
-    p3[Servisi Bekle]
+    p3[Servise Bin]
     p4[Yürüyerek Git]
-    io2[/Okula Varıldı/]
     e([Bitir: Sınıfta])
     
-    s --> io1
-    io1 --> p1
+    s --> p1
     p1 --> p2
     p2 --> d1
     d1 -->|Evet| p3
     d1 -->|Hayır| p4
-    p3 --> io2
-    p4 --> io2
-    io2 --> e
+    p3 --> e
+    p4 --> e
 
-ÖRNEK 2 - ALIŞVERİŞ YAPMA (10 DÜĞÜM):
+ÖRNEK 2 - ALIŞVERİŞ YAPMA (8 DÜĞÜM):
 flowchart TD
     s([Başla: Alışveriş])
-    p1[Alışveriş Listesi Hazırla]
+    p1[Liste Hazırla]
     p2[Markete Git]
-    io1[/Ürünleri Gez/]
-    p3[Sepete Koy]
+    p3[Ürünleri Seç]
     d1{Liste Tamamlandı mı?}
     p4[Kasaya Git]
-    io2[/Ödeme Yap/]
-    p5[Poşetleri Al]
+    p5[Ödeme Yap]
     e([Bitir: Eve Dön])
     
     s --> p1
     p1 --> p2
-    p2 --> io1
-    io1 --> p3
+    p2 --> p3
     p3 --> d1
-    d1 -->|Hayır| io1
+    d1 -->|Hayır| p3
     d1 -->|Evet| p4
-    p4 --> io2
-    io2 --> p5
+    p4 --> p5
     p5 --> e
 
 ÖNEMLİ:
 - flowchart TD ile başla
 - ```mermaid KULLANMA, sadece düz kod
 - Tüm düğümler bağlı olmalı
-- Konuya uygun, gerçekçi ve GENİŞ şema oluştur
+- Konuya uygun, SADE şema oluştur
 - Örnekler format içindir; kendi üretiminde konuya uygun düğüm tiplerini kullan
 """
 
@@ -1401,6 +1572,7 @@ Akış şeması moduyla UYUMLU olsun; aynı ana adımlar yer alsın.
 KURALLAR:
 - Düğüm sayısını konuya göre kendin seç: 6 ile 18 arası
 - Etiketler doğal ve anlamlı Türkçe olmalı
+- İngilizce etiket KULLANMA
 - 2-6 kelime arası, fiil + nesne tercih et
 - p1, d1, io1 gibi kısaltmalar KULLANMA
 - "kind" alanı sadece şu değerlerden biri olmalı:
@@ -1512,12 +1684,35 @@ def node_markdown(label: str, kind: str) -> str:
     # Markdown node bileşenlerinde bold çalışır.
     return f"**{icon} {label}**".strip()
 
+def normalize_color_overrides(colors: Optional[Dict[str, str]]) -> Dict[str, str]:
+    if not isinstance(colors, dict):
+        return {}
+    out: Dict[str, str] = {}
+    for key in ("bg", "border", "text"):
+        val = colors.get(key)
+        if isinstance(val, str) and val.strip():
+            out[key] = val.strip()
+    return out
 
-def node_style(kind: str, width: int = 160) -> Dict[str, object]:
+
+def get_global_node_colors() -> Dict[str, str]:
+    if not st.session_state.get("global_node_colors_enabled"):
+        return {}
+    colors = {
+        "bg": st.session_state.get("global_node_bg"),
+        "border": st.session_state.get("global_node_border"),
+        "text": st.session_state.get("global_node_text"),
+    }
+    return normalize_color_overrides(colors)
+
+
+def node_style(kind: str, width: int = 160, colors: Optional[Dict[str, str]] = None) -> Dict[str, object]:
     spec = NODE_KIND.get(kind, NODE_KIND["process"])
-    bg = spec["bg"]
-    border = spec["border"]
-    text = spec["text"]
+    colors = normalize_color_overrides(colors)
+    bg = colors.get("bg") or spec["bg"]
+    border = colors.get("border") or spec["border"]
+    text = colors.get("text") or spec["text"]
+    use_custom = bool(colors)
 
     base: Dict[str, object] = {
         "backgroundColor": bg,
@@ -1529,22 +1724,31 @@ def node_style(kind: str, width: int = 160) -> Dict[str, object]:
         "boxShadow": "0 6px 18px rgba(15, 23, 42, 0.08)",
     }
 
+    def apply_clip(path_value: str) -> None:
+        base["clipPath"] = path_value
+        base["WebkitClipPath"] = path_value
+
     shape = spec.get("shape")
     if shape == "terminal":
         base["borderRadius"] = "999px"
     elif shape == "diamond":
         # Elmas görünümü: clip-path (metin dönmez)
-        base["clipPath"] = "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)"
+        apply_clip("polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)")
         base["padding"] = "18px 14px"
         base["boxShadow"] = f"0 0 0 2px {border} inset, 0 6px 18px rgba(15, 23, 42, 0.12)"
     elif shape == "parallelogram":
-        base["clipPath"] = "polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)"
+        apply_clip("polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%)")
     elif shape == "subroutine":
         base["borderStyle"] = "solid"
-        base["borderRadius"] = "14px"
+        base["borderRadius"] = "10px"
+        base["background"] = (
+            f"linear-gradient(90deg, {border} 0, {border} 4px, {bg} 4px, "
+            f"{bg} calc(100% - 4px), {border} calc(100% - 4px), {border} 100%)"
+        )
     elif shape == "database":
         base["borderRadius"] = "18px"
-        base["background"] = "linear-gradient(180deg, rgba(238,242,255,1) 0%, rgba(224,231,255,1) 100%)"
+        if not use_custom:
+            base["background"] = "linear-gradient(180deg, rgba(238,242,255,1) 0%, rgba(224,231,255,1) 100%)"
     elif shape == "circle":
         base["borderRadius"] = "999px"
         base["width"] = f"{max(90, int(width))}px"
@@ -1553,15 +1757,55 @@ def node_style(kind: str, width: int = 160) -> Dict[str, object]:
         base["borderStyle"] = "dashed"
         base["borderWidth"] = "2px"
         base["borderRadius"] = "10px"
-        base["background"] = "linear-gradient(180deg, rgba(255,247,237,1) 0%, rgba(255,237,213,1) 100%)"
+        if not use_custom:
+            base["background"] = "linear-gradient(180deg, rgba(255,247,237,1) 0%, rgba(255,237,213,1) 100%)"
     elif shape == "hex":
-        base["clipPath"] = "polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)"
+        apply_clip("polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)")
         base["padding"] = "18px 14px"
         base["boxShadow"] = f"0 0 0 2px {border} inset, 0 6px 18px rgba(15, 23, 42, 0.12)"
     elif shape == "double":
         base["borderStyle"] = "double"
         base["borderWidth"] = "4px"
         base["borderRadius"] = "12px"
+    elif shape == "document":
+        apply_clip(
+            "polygon(0% 0%, 100% 0%, 100% 82%, 85% 92%, 70% 82%, 50% 92%, 30% 82%, 15% 92%, 0% 82%)"
+        )
+        base["padding"] = "16px 14px 20px"
+    elif shape == "multi_document":
+        apply_clip(
+            "polygon(0% 0%, 100% 0%, 100% 82%, 85% 92%, 70% 82%, 50% 92%, 30% 82%, 15% 92%, 0% 82%)"
+        )
+        base["padding"] = "16px 14px 20px"
+        base["boxShadow"] = (
+            f"6px 6px 0 -2px {border}, 12px 12px 0 -4px {border}, "
+            "0 6px 18px rgba(15, 23, 42, 0.08)"
+        )
+    elif shape == "data_storage":
+        apply_clip("polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%)")
+        base["padding"] = "16px 14px"
+    elif shape == "internal_storage":
+        base["borderRadius"] = "10px"
+        base["background"] = (
+            f"linear-gradient(90deg, {border} 0, {border} 4px, {bg} 4px, "
+            f"{bg} calc(100% - 4px), {border} calc(100% - 4px), {border} 100%)"
+        )
+    elif shape == "tape_data":
+        base["borderRadius"] = "999px"
+        base["width"] = f"{max(120, int(width))}px"
+        base["padding"] = "16px 14px"
+    elif shape == "display":
+        apply_clip("polygon(0% 0%, 88% 0%, 100% 50%, 88% 100%, 0% 100%)")
+        base["padding"] = "16px 14px"
+    elif shape == "manual_operation":
+        apply_clip("polygon(0% 0%, 100% 0%, 90% 100%, 10% 100%)")
+        base["padding"] = "16px 14px"
+    elif shape == "merge":
+        apply_clip("polygon(0% 0%, 100% 0%, 50% 100%)")
+        base["padding"] = "18px 14px 20px"
+    elif shape == "manual_input":
+        apply_clip("polygon(0% 15%, 100% 0%, 100% 100%, 0% 100%)")
+        base["padding"] = "16px 14px"
     else:
         base["borderRadius"] = "12px"
 
@@ -1639,6 +1883,7 @@ def make_node(
     width: int = 160,
     source_position: Optional[str] = None,
     target_position: Optional[str] = None,
+    colors: Optional[Dict[str, str]] = None,
 ) -> StreamlitFlowNode:
     if not source_position or not target_position:
         src, tgt = default_handle_positions(st.session_state.get("direction", DEFAULT_DIRECTION))
@@ -1649,6 +1894,9 @@ def make_node(
         "label": label,
         "kind": kind,
     }
+    color_overrides = normalize_color_overrides(colors)
+    if color_overrides:
+        data["colors"] = color_overrides
 
     return StreamlitFlowNode(
         id=node_id,
@@ -1661,7 +1909,7 @@ def make_node(
         selectable=True,
         connectable=True,
         deletable=True,
-        style=node_style(kind, width=width),
+        style=node_style(kind, width=width, colors=color_overrides),
     )
 
 
@@ -1710,6 +1958,11 @@ def normalize_state(flow_state: StreamlitFlowState) -> None:
         data["kind"] = kind
         data["label"] = label
         data["content"] = node_markdown(label, kind)
+        color_overrides = normalize_color_overrides(data.get("colors") if isinstance(data, dict) else None)
+        if color_overrides:
+            data["colors"] = color_overrides
+        else:
+            data.pop("colors", None)
         n.data = data  # type: ignore[attr-defined]
         
         # Grid snap (eğer aktifse)
@@ -1718,23 +1971,24 @@ def normalize_state(flow_state: StreamlitFlowState) -> None:
             snapped_pos = snap_to_grid(pos[0], pos[1], grid_size=20)
             set_node_pos(n, snapped_pos)
 
-        # style genişlik yoksa ekle
-        style = getattr(n, "style", {}) or {}
-        if "width" not in style:
-            style["width"] = "160px"
-        
+        # style: tip/renk/şekil bazlı yeniden üret
+        existing_style = getattr(n, "style", {}) or {}
+        width = parse_style_width(existing_style, fallback=160)
+        global_colors = get_global_node_colors()
+        effective_colors = global_colors if global_colors else color_overrides
+        style = node_style(kind, width=width, colors=effective_colors)
+
         # Seçili düğüm border efekti
         is_selected = (n.id == selected_node_id)
         if is_selected:
+            base_shadow = style.get("boxShadow")
+            highlight = "0 0 0 4px rgba(59, 130, 246, 0.2), 0 8px 16px rgba(0,0,0,0.12)"
             style["border"] = "3px dashed #3B82F6"
-            style["boxShadow"] = "0 0 0 4px rgba(59, 130, 246, 0.2), 0 8px 16px rgba(0,0,0,0.12)"
-        else:
-            # Normal border'ı geri yükle
-            spec = NODE_KIND.get(kind, NODE_KIND["process"])
-            border_color = spec["border"]
-            style["border"] = f"2px solid {border_color}"
-            style["boxShadow"] = "0 6px 18px rgba(15, 23, 42, 0.08)"
-        
+            if base_shadow:
+                style["boxShadow"] = f"{base_shadow}, {highlight}"
+            else:
+                style["boxShadow"] = highlight
+
         n.style = style  # type: ignore[attr-defined]
 
         # node_type streamlit-flow'un beklediği değerlerden biri olmalı
@@ -2276,20 +2530,135 @@ def enforce_connected_flow(flow_state: StreamlitFlowState) -> None:
 def polish_ai_labels(flow_state: StreamlitFlowState, topic: str = "") -> None:
     """AI etiketlerini daha doğal hale getirir."""
     base = turkish_title((topic or "").strip())
-    generic_process = {"işlem", "adım", "iş", "süreç", "uygula", "kontrol"}
-    generic_io = {"giriş/çıkış", "giriş", "çıktı", "girdi", "output", "input"}
-    generic_decision = {"karar", "koşul", "durum"}
+    phrase_map = [
+        ("sign up", "Kayıt Ol"),
+        ("sign in", "Giriş Yap"),
+        ("log in", "Giriş Yap"),
+        ("log out", "Çıkış Yap"),
+        ("login page", "Giriş Sayfası"),
+        ("registration page", "Kayıt Sayfası"),
+        ("reset password", "Şifre Sıfırla"),
+        ("password error", "Şifre Hatası"),
+        ("account error", "Hesap Hatası"),
+        ("not found", "Bulunamadı"),
+        ("access denied", "Erişim Reddedildi"),
+        ("try again", "Tekrar Dene"),
+    ]
+    word_map = {
+        "start": "Başla",
+        "begin": "Başla",
+        "end": "Bitir",
+        "stop": "Durdur",
+        "finish": "Bitir",
+        "input": "Giriş",
+        "output": "Çıkış",
+        "process": "İşlem",
+        "decision": "Karar",
+        "yes": "Evet",
+        "no": "Hayır",
+        "true": "Doğru",
+        "false": "Yanlış",
+        "success": "Başarılı",
+        "failed": "Başarısız",
+        "fail": "Başarısız",
+        "error": "Hata",
+        "invalid": "Geçersiz",
+        "valid": "Geçerli",
+        "login": "Giriş Yap",
+        "logout": "Çıkış Yap",
+        "register": "Kayıt Ol",
+        "signup": "Kayıt Ol",
+        "verify": "Doğrula",
+        "check": "Kontrol Et",
+        "validate": "Doğrula",
+        "submit": "Gönder",
+        "approve": "Onayla",
+        "reject": "Reddet",
+        "cancel": "İptal",
+        "retry": "Tekrar Dene",
+        "continue": "Devam Et",
+        "save": "Kaydet",
+        "load": "Yükle",
+        "update": "Güncelle",
+        "create": "Oluştur",
+        "delete": "Sil",
+        "reset": "Sıfırla",
+        "password": "Şifre",
+        "account": "Hesap",
+        "user": "Kullanıcı",
+        "email": "E-posta",
+        "send": "Gönder",
+        "receive": "Al",
+        "read": "Oku",
+        "write": "Yaz",
+        "open": "Aç",
+        "close": "Kapat",
+        "ok": "Tamam",
+        "page": "Sayfası",
+    }
+    generic_terminal = {
+        "başla",
+        "basla",
+        "başlangıç",
+        "bitir",
+        "bitti",
+        "son",
+        "start",
+        "begin",
+        "end",
+        "stop",
+        "finish",
+        "entry",
+        "exit",
+    }
+    generic_process = {"işlem", "adım", "iş", "süreç", "uygula", "kontrol", "process", "step", "action", "task"}
+    generic_io = {
+        "giriş/çıkış",
+        "giriş",
+        "çıktı",
+        "girdi",
+        "output",
+        "input",
+        "input/output",
+        "read",
+        "write",
+    }
+    generic_decision = {"karar", "koşul", "durum", "decision", "condition", "check"}
     process_idx = 1
     io_idx = 1
+    action_pool = action_pool_for_topic(base)
+    out_edges, in_edges = build_graph(flow_state)
+    start_like = {
+        n.id
+        for n in flow_state.nodes
+        if get_node_kind(n) == "terminal" and len(in_edges.get(n.id, [])) == 0
+    }
+    end_like = {
+        n.id
+        for n in flow_state.nodes
+        if get_node_kind(n) == "terminal" and len(out_edges.get(n.id, [])) == 0
+    }
     for n in flow_state.nodes:
         kind = get_node_kind(n)
         label = get_node_label(n)
         raw = label or ""
+        # İngilizce ifadeleri Türkçeleştir (AI çıktıları için)
+        for src, tgt in phrase_map:
+            raw = re.sub(rf"(?i)\\b{re.escape(src)}\\b", tgt, raw)
+        for src, tgt in word_map.items():
+            raw = re.sub(rf"(?i)\\b{re.escape(src)}\\b", tgt, raw)
         cleaned = normalize_label_text(raw)
         if cleaned:
             raw = cleaned
         lowered = raw.lower().strip()
-        if kind == "decision" and any(op in raw for op in ["%", "==", ">=", "<=", ">", "<"]):
+        if kind == "terminal" and (not raw.strip() or lowered in generic_terminal):
+            if n.id in start_like and n.id not in end_like:
+                label = "Başla"
+            elif n.id in end_like:
+                label = "Bitir"
+            else:
+                label = "Başla/Bitir"
+        elif kind == "decision" and any(op in raw for op in ["%", "==", ">=", "<=", ">", "<"]):
             label = "Koşul sağlandı mı?"
         elif kind == "decision" and (not raw.strip() or lowered in generic_decision):
             label = "Koşul sağlandı mı?"
@@ -2297,10 +2666,8 @@ def polish_ai_labels(flow_state: StreamlitFlowState, topic: str = "") -> None:
             label = "Giriş Bilgisi Al" if io_idx == 1 else "Sonucu Göster"
             io_idx += 1
         elif kind == "process" and (not raw.strip() or lowered in generic_process):
-            if base:
-                label = f"{base} - Adım {process_idx}"
-            else:
-                label = f"Adım {process_idx}"
+            idx = (process_idx - 1) % max(1, len(action_pool))
+            label = action_pool[idx]
             process_idx += 1
         elif len(raw.strip()) < 3:
             label = NODE_KIND.get(kind, NODE_KIND["process"])["default"]
@@ -2333,6 +2700,15 @@ def repair_ai_kinds(flow_state: StreamlitFlowState) -> None:
 
 def ensure_decision_edge_labels(flow_state: StreamlitFlowState) -> None:
     """Karar düğümlerinde ilk 2 dal için Evet/Hayır etiketlerini tamamlar. 3. ve sonrası boş kalır."""
+    def normalize_decision_label(value: str) -> str:
+        raw = normalize_label_text(value)
+        lower = raw.lower()
+        if lower in {"evet", "yes", "y", "true", "t"}:
+            return "Evet"
+        if lower in {"hayır", "hayir", "no", "n", "false", "f"}:
+            return "Hayır"
+        return raw
+
     out_edges, _ = build_graph(flow_state)
     for n in flow_state.nodes:
         if get_node_kind(n) != "decision":
@@ -2340,7 +2716,14 @@ def ensure_decision_edge_labels(flow_state: StreamlitFlowState) -> None:
         edges = out_edges.get(n.id, [])
         if len(edges) < 2:
             continue
-        
+
+        # Var olan etiketleri Türkçe normalize et
+        for e in edges[:2]:
+            current = get_edge_label(e)
+            updated = normalize_decision_label(current)
+            if updated and updated != current:
+                e.label = updated  # type: ignore[attr-defined]
+
         # İlk 2 dal için Evet/Hayır kontrolü
         labels = [get_edge_label(e).strip().lower() for e in edges[:2]]
         
@@ -2368,6 +2751,8 @@ def is_generic_process_label(label: str) -> bool:
     if re.match(r".*adım\s*\d+$", text):
         return True
     if re.match(r".*step\s*\d+$", text):
+        return True
+    if len(text.split()) <= 2 and any(tok in text for tok in ["işlem", "kontrol", "uygula", "adım", "süreç"]):
         return True
     return False
 
@@ -2404,10 +2789,11 @@ def simplify_flow_state(flow_state: StreamlitFlowState) -> None:
             break
 
 
-def build_required_flow_template(topic: str) -> str:
+def build_required_flow_template(topic: str, include_io: bool = True) -> str:
     """Zorunlu düğüm tiplerini içeren güvenli akış şeması üretir."""
     topic = turkish_title((topic or "Akış").strip() or "Akış")
-    return f"""flowchart TD
+    if include_io:
+        return f"""flowchart TD
     s([Başla: {topic}])
     io1[/Giriş Bilgisi Al/]
     p1[Hazırlık Yap]
@@ -2423,6 +2809,19 @@ def build_required_flow_template(topic: str) -> str:
     d1 -->|Hayır| p1
     p2 --> io2
     io2 --> e
+""".strip()
+    return f"""flowchart TD
+    s([Başla: {topic}])
+    p1[Hazırlık Yap]
+    d1{{Koşul Sağlandı mı?}}
+    p2[Adımı Uygula]
+    e([Bitir: Tamamlandı])
+    
+    s --> p1
+    p1 --> d1
+    d1 -->|Evet| p2
+    d1 -->|Hayır| p1
+    p2 --> e
 """.strip()
 
 
@@ -3094,8 +3493,17 @@ div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Başla"]),
 div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Giriş/Çıkış"]),
 div[data-testid="stHorizontalBlock"]:has(button[aria-label*="İşlem"]),
 div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Karar"]),
+div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Belge"]),
+div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Çoklu Belgeler"]),
+div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Veri Deposu"]),
+div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Dahili Depo"]),
+div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Bant Veri"]),
 div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Alt Süreç"]),
 div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Veritabanı"]),
+div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Görüntü"]),
+div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Manuel İşlem"]),
+div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Birleştir"]),
+div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Manuel Giriş"]),
 div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Bağlantı"]),
 div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Not"]),
 div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Döngü"]),
@@ -3150,8 +3558,17 @@ div[data-testid="stHorizontalBlock"]:has(button[aria-label*="Bitir"]) {
 .stButton > button[aria-label*="Giriş/Çıkış"] { background: #EFF6FF !important; border-color: #2563EB !important; color: #1E3A8A !important; }
 .stButton > button[aria-label*="İşlem"] { background: #F1F5F9 !important; border-color: #334155 !important; color: #0F172A !important; }
 .stButton > button[aria-label*="Karar"] { background: #FFF7D6 !important; border-color: #F59E0B !important; color: #92400E !important; }
+.stButton > button[aria-label*="Belge"] { background: #FFF7ED !important; border-color: #F97316 !important; color: #9A3412 !important; }
+.stButton > button[aria-label*="Çoklu Belgeler"] { background: #FFF7ED !important; border-color: #F97316 !important; color: #9A3412 !important; }
+.stButton > button[aria-label*="Veri Deposu"] { background: #DCFCE7 !important; border-color: #16A34A !important; color: #166534 !important; }
+.stButton > button[aria-label*="Dahili Depo"] { background: #DCFCE7 !important; border-color: #15803D !important; color: #166534 !important; }
+.stButton > button[aria-label*="Bant Veri"] { background: #DCFCE7 !important; border-color: #16A34A !important; color: #166534 !important; }
 .stButton > button[aria-label*="Alt Süreç"] { background: #F3E8FF !important; border-color: #7C3AED !important; color: #5B21B6 !important; }
 .stButton > button[aria-label*="Veritabanı"] { background: #EEF2FF !important; border-color: #1E40AF !important; color: #1E3A8A !important; }
+.stButton > button[aria-label*="Görüntü"] { background: #FEF3C7 !important; border-color: #D97706 !important; color: #92400E !important; }
+.stButton > button[aria-label*="Manuel İşlem"] { background: #FEF3C7 !important; border-color: #D97706 !important; color: #92400E !important; }
+.stButton > button[aria-label*="Birleştir"] { background: #FEF3C7 !important; border-color: #D97706 !important; color: #92400E !important; }
+.stButton > button[aria-label*="Manuel Giriş"] { background: #FEF3C7 !important; border-color: #D97706 !important; color: #92400E !important; }
 .stButton > button[aria-label*="Bağlantı"] { background: #FFF3C4 !important; border-color: #F59E0B !important; color: #92400E !important; }
 .stButton > button[aria-label*="Not"] { background: #FFF7ED !important; border-color: #EA580C !important; color: #7C2D12 !important; }
 .stButton > button[aria-label*="Döngü"] { background: #ECFEFF !important; border-color: #06B6D4 !important; color: #0E7490 !important; }
@@ -3286,8 +3703,14 @@ def inject_tr_translation_script() -> None:
     "Node Width": "Düğüm Genişliği",
     "Node Label": "Düğüm Etiketi",
     "Node Type": "Düğüm Tipi",
+    "Shape": "Şekil",
+    "Shapes": "Şekiller",
     "Edge Label": "Bağlantı Etiketi",
     "Edge Type": "Bağlantı Tipi",
+    "Connection": "Bağlantı",
+    "Connections": "Bağlantılar",
+    "Handle": "Bağlantı Noktası",
+    "Handles": "Bağlantı Noktaları",
     "Source Position": "Kaynak Konum",
     "Target Position": "Hedef Konum",
     "Top": "Üst",
@@ -3751,6 +4174,15 @@ def initialize_state() -> None:
     if "auto_connect" not in st.session_state:
         st.session_state.auto_connect = True
 
+    if "global_node_colors_enabled" not in st.session_state:
+        st.session_state.global_node_colors_enabled = False
+    if "global_node_bg" not in st.session_state:
+        st.session_state.global_node_bg = DEFAULT_GLOBAL_NODE_COLORS["bg"]
+    if "global_node_border" not in st.session_state:
+        st.session_state.global_node_border = DEFAULT_GLOBAL_NODE_COLORS["border"]
+    if "global_node_text" not in st.session_state:
+        st.session_state.global_node_text = DEFAULT_GLOBAL_NODE_COLORS["text"]
+
     if "auto_connect_fired" not in st.session_state:
         st.session_state.auto_connect_fired = False
 
@@ -3765,12 +4197,8 @@ def initialize_state() -> None:
 
     if "quick_node_label" not in st.session_state:
         st.session_state.quick_node_label = ""
-    if "quick_edge_label" not in st.session_state:
-        st.session_state.quick_edge_label = ""
     if "last_quick_node_id" not in st.session_state:
         st.session_state.last_quick_node_id = None
-    if "last_quick_edge_id" not in st.session_state:
-        st.session_state.last_quick_edge_id = None
 
     if "export_png" not in st.session_state:
         st.session_state.export_png = None
@@ -3827,7 +4255,8 @@ def apply_view_mode() -> None:
     st.session_state.allowed_palette = cfg["palette"]
     st.session_state.allowed_exports = cfg["export_formats"]
     st.session_state.allow_edge_style = cfg["allow_edge_style"]
-    st.session_state.show_templates = cfg["show_templates"]
+    if "show_templates" not in st.session_state:
+        st.session_state.show_templates = cfg["show_templates"]
     if st.session_state.export_format not in st.session_state.allowed_exports:
         st.session_state.export_format = st.session_state.allowed_exports[0]
     if st.session_state.get("quick_export_format") not in st.session_state.allowed_exports:
@@ -4121,6 +4550,7 @@ def update_node(
     width: int,
     source_position: str,
     target_position: str,
+    colors: Optional[Dict[str, str]] = None,
 ) -> None:
     """Mevcut düğümü günceller.
     
@@ -4150,10 +4580,19 @@ def update_node(
     data["label"] = new_label
     data["kind"] = new_kind
     data["content"] = node_markdown(new_label, new_kind)
+    existing_colors = normalize_color_overrides(data.get("colors") if isinstance(data, dict) else None)
+    if colors is None:
+        color_overrides = existing_colors
+    else:
+        color_overrides = normalize_color_overrides(colors)
+        if color_overrides:
+            data["colors"] = color_overrides
+        else:
+            data.pop("colors", None)
     n.data = data  # type: ignore[attr-defined]
 
     # style
-    n.style = node_style(new_kind, width=width)  # type: ignore[attr-defined]
+    n.style = node_style(new_kind, width=width, colors=color_overrides)  # type: ignore[attr-defined]
 
     # handles
     if hasattr(n, "source_position"):
@@ -4235,15 +4674,23 @@ def apply_quick_node_label() -> None:
     update_node(node_id, label, kind, width, src_pos, tgt_pos)
 
 
-def apply_quick_edge_label() -> None:
+def apply_edge_label_input() -> None:
     edge_id = st.session_state.get("selected_edge_id")
     if not edge_id:
         return
     edge = find_edge(edge_id)
     if edge is None:
         return
-    label = (st.session_state.get("quick_edge_label") or "").strip()
-    update_edge(edge_id, label, get_edge_type(edge), edge.source, edge.target, get_edge_variant(edge))
+    label = (st.session_state.get("edge_label_input") or "").strip()
+    update_edge(
+        edge_id,
+        label,
+        get_edge_type(edge),
+        edge.source,
+        edge.target,
+        get_edge_variant(edge),
+        color=get_edge_color(edge),
+    )
 
 
 # =============================================================================
@@ -4311,45 +4758,46 @@ def render_ai_panel(container: st.delta_generator.DeltaGenerator) -> None:
 
         prompt = st.text_area(
             "Akış Tanımı",
-            placeholder="Konu + amaç + 5-8 adım + 1-2 karar yazın (ör. okula gidiş).",
+            placeholder="Konu + amaç + 4-7 adım + 1 karar yazın (ör. okula gidiş).",
             height=110,
-            help="Kısa ve net yazın: konu, amaç, ana adımlar ve kararlar.",
+            help="Kısa ve net yazın: konu, amaç, ana adımlar ve kararlar. Gereksiz adım eklemeyin.",
             key="ai_prompt_text",
         )
         prompt = st.session_state.ai_prompt_text
         
-        with container.expander("🧩 İdeal Tanım Şablonu", expanded=False):
-            container.caption("En iyi sonuç için şu yapıyı kullan: konu + amaç + ana adımlar + kararlar + giriş/çıkış.")
-            template = (
-                "Konu: (kısa başlık)\n"
-                "Amaç: (hedef)\n"
-                "Başlangıç: (tetikleyici olay)\n"
-                "Ana Adımlar: adım1; adım2; adım3; ...\n"
-                "Kararlar: soru? -> Evet: ... / Hayır: ...\n"
-                "Girişler: (alınan bilgiler)\n"
-                "Çıkışlar: (üretilen sonuç)\n"
-                "Notlar: (özel şartlar / istisna)"
-            )
-            container.code(template, language="text")
-            col_t1, col_t2 = container.columns(2)
-            with col_t1:
-                if col_t1.button("Şablonu Yapıştır", use_container_width=True, key="paste_prompt_template"):
-                    st.session_state.ai_prompt_text = template
-                    st.rerun()
-            with col_t2:
-                sample = (
-                    "Konu: Okula gidiş\n"
-                    "Amaç: Okula zamanında varmak\n"
-                    "Başlangıç: Alarm çaldı\n"
-                    "Ana Adımlar: Uyan; Hazırlan; Kahvaltı yap; Çantayı al\n"
-                    "Kararlar: Servis var mı? -> Evet: Servise bin / Hayır: Yürüyerek git\n"
-                    "Girişler: Saat, hava durumu\n"
-                    "Çıkışlar: Okula varıldı\n"
-                    "Notlar: Geç kalırsam hızlı rota"
+        if st.session_state.get("show_templates", False):
+            with container.expander("🧩 İdeal Tanım Şablonu", expanded=False):
+                container.caption("En iyi sonuç için şu yapıyı kullan: konu + amaç + ana adımlar + kararlar + giriş/çıkış.")
+                template = (
+                    "Konu: (kısa başlık)\n"
+                    "Amaç: (hedef)\n"
+                    "Başlangıç: (tetikleyici olay)\n"
+                    "Ana Adımlar: adım1; adım2; adım3; ...\n"
+                    "Kararlar: soru? -> Evet: ... / Hayır: ...\n"
+                    "Girişler: (alınan bilgiler)\n"
+                    "Çıkışlar: (üretilen sonuç)\n"
+                    "Notlar: (özel şartlar / istisna)"
                 )
-                if col_t2.button("Örnek Doldur", use_container_width=True, key="fill_prompt_sample"):
-                    st.session_state.ai_prompt_text = sample
-                    st.rerun()
+                container.code(template, language="text")
+                col_t1, col_t2 = container.columns(2)
+                with col_t1:
+                    if col_t1.button("Şablonu Yapıştır", use_container_width=True, key="paste_prompt_template"):
+                        st.session_state.ai_prompt_text = template
+                        st.rerun()
+                with col_t2:
+                    sample = (
+                        "Konu: Okula gidiş\n"
+                        "Amaç: Okula zamanında varmak\n"
+                        "Başlangıç: Alarm çaldı\n"
+                        "Ana Adımlar: Uyan; Hazırlan; Kahvaltı yap; Çantayı al\n"
+                        "Kararlar: Servis var mı? -> Evet: Servise bin / Hayır: Yürüyerek git\n"
+                        "Girişler: Saat, hava durumu\n"
+                        "Çıkışlar: Okula varıldı\n"
+                        "Notlar: Geç kalırsam hızlı rota"
+                    )
+                    if col_t2.button("Örnek Doldur", use_container_width=True, key="fill_prompt_sample"):
+                        st.session_state.ai_prompt_text = sample
+                        st.rerun()
         
         mode_options = ["Akış Şeması", "Bağımsız Düğümler"]
         ai_mode = st.radio(
@@ -4378,7 +4826,7 @@ def render_ai_panel(container: st.delta_generator.DeltaGenerator) -> None:
                         if labels:
                             apply_free_nodes(labels, name="AI Serbest")
                         else:
-                            apply_free_nodes(fallback_free_labels(prompt, count=FREE_NODES_MIN), name="Serbest (Şablon)")
+                            toast_warning("AI bağımsız düğüm üretimi başarısız oldu; şablon uygulanmadı.")
                     else:
                         # Akış Şeması Modu
                         with st.spinner("🤖 AI akış şeması oluşturuyor..."):
@@ -4388,9 +4836,7 @@ def render_ai_panel(container: st.delta_generator.DeltaGenerator) -> None:
                             # Şemayı uygula ve ekrana yansıt
                             apply_ai_flow_template(mermaid_code, prompt, name="AI Akış Şeması")
                         else:
-                            # Rate limit veya boş yanıt durumunda güvenli şema uygula
-                            fallback = build_required_flow_template(prompt)
-                            apply_ai_flow_template(fallback, prompt, name="Akış Şeması (Şablon)")
+                            toast_warning("AI akış şeması üretimi başarısız oldu; şablon uygulanmadı.")
         
         with col2:
             if st.button("🗑️ Tümünü Temizle", use_container_width=True, help="Tüm düğümleri siler, sıfırdan başlar"):
@@ -4517,6 +4963,9 @@ def render_settings_panel(container: st.delta_generator.DeltaGenerator) -> None:
     container.subheader("⚙️ Ayarlar")
     container.caption("Yön, yerleşim ve hizalama seçenekleri.")
 
+    prev_spacing = st.session_state.get("node_spacing", 80)
+    prev_layout_mode = st.session_state.get("layout_mode", DEFAULT_LAYOUT_MODE)
+
     current_label = next(
         (k for k, v in DIRECTION_LABELS.items() if v == st.session_state.direction),
         "Yukarıdan Aşağı (TD)",
@@ -4529,11 +4978,21 @@ def render_settings_panel(container: st.delta_generator.DeltaGenerator) -> None:
     new_dir = DIRECTION_LABELS[new_label]
     if new_dir != st.session_state.direction:
         st.session_state.direction = new_dir
+        if st.session_state.layout_mode == "Otomatik (Ağaç)":
+            st.session_state.force_layout_reset = True
         sync_code_text(generate_mermaid(st.session_state.flow_state, new_dir))
 
     layout_mode = container.selectbox("Yerleşim", LAYOUT_MODES, index=LAYOUT_MODES.index(st.session_state.layout_mode))
     if layout_mode != st.session_state.layout_mode:
         st.session_state.layout_mode = layout_mode
+        if st.session_state.layout_mode == "Otomatik (Ağaç)":
+            st.session_state.force_layout_reset = True
+
+    container.toggle(
+        "Şablon Paneli",
+        key="show_templates",
+        help="Şablon kütüphanesi ve örnek şablon alanını gösterir.",
+    )
 
     auto_connect = container.toggle("Tıkla‑Bağla (otomatik)", key="auto_connect")
     if not auto_connect:
@@ -4545,6 +5004,20 @@ def render_settings_panel(container: st.delta_generator.DeltaGenerator) -> None:
         help="Düğümleri 20px ızgaraya otomatik hizalar",
     )
     container.slider("Düğüm aralığı", 40, 120, key="node_spacing")
+    if st.session_state.get("layout_mode") == "Otomatik (Ağaç)":
+        if st.session_state.get("node_spacing") != prev_spacing:
+            st.session_state.force_layout_reset = True
+        if prev_layout_mode != st.session_state.get("layout_mode"):
+            st.session_state.force_layout_reset = True
+
+    container.markdown("---")
+    container.markdown("**Global Düğüm Renkleri**")
+    container.caption("Açıkken tüm düğümler tek bir renk paletini kullanır.")
+    use_global = container.toggle("Global renkleri etkinleştir", key="global_node_colors_enabled")
+    if use_global:
+        container.color_picker("Arka Plan (Global)", key="global_node_bg")
+        container.color_picker("Kenarlık (Global)", key="global_node_border")
+        container.color_picker("Yazı (Global)", key="global_node_text")
 
     # Grid görünümünü anlık kontrol et
     if not st.session_state.get("show_grid", True):
@@ -4567,7 +5040,7 @@ def render_help_panel(container: st.delta_generator.DeltaGenerator) -> None:
     exp_nodes.markdown(
             """
 <div class="help-small">
-<strong>🟢 Başla / Bitir (Terminal)</strong><br/>
+<strong>🟢 Başla / Bitir</strong><br/>
 • Algoritmanın başlangıç ve bitiş noktalarını gösterir.<br/>
 • Her akış şeması <strong>bir Başla</strong> ile başlar, <strong>bir veya daha fazla Bitir</strong> ile sona erer.<br/>
 • Örnek: "Başla" → algoritmanın ilk adımı<br/>
@@ -4577,14 +5050,38 @@ def render_help_panel(container: st.delta_generator.DeltaGenerator) -> None:
 • Giriş: "sayı oku", "isim al"<br/>
 • Çıkış: "sonucu yaz", "mesaj göster"<br/>
 <br/>
+<strong>✍️ Manuel Giriş</strong><br/>
+• Kullanıcıdan elle/klavye ile veri alınan adımlar.<br/>
+• Örnek: "elle değer gir", "form doldur"<br/>
+<br/>
+<strong>🖥️ Görüntü</strong><br/>
+• Ekranda görüntülenen çıktı veya sonuç.<br/>
+• Örnek: "grafiği göster", "ekranda listele"<br/>
+<br/>
 <strong>⚙️ İşlem</strong><br/>
 • Hesaplama, atama, matematiksel işlemler için kullanılır.<br/>
 • Örnek: "toplam = a + b", "sayac = sayac + 1", "sonuç = x * 2"<br/>
+<br/>
+<strong>📄 Belge</strong><br/>
+• Tek bir doküman/çıktı üretimi için kullanılır.<br/>
+• Örnek: "raporu yazdır", "fatura oluştur"<br/>
+<br/>
+<strong>📑 Çoklu Belgeler</strong><br/>
+• Birden fazla dokümanı temsil eder.<br/>
+• Örnek: "evrak seti hazırla"<br/>
 <br/>
 <strong>❓ Karar</strong><br/>
 • Koşullu durumlar için kullanılır (eğer/değilse).<br/>
 • Baklava şeklinde gösterilir, iki çıkışı vardır: Evet/Hayır veya Doğru/Yanlış<br/>
 • Örnek: "sayı > 0 ?", "not >= 50 ?", "şifre doğru mu?"<br/>
+<br/>
+<strong>🔻 Birleştir</strong><br/>
+• Birden fazla akışı tek noktada toplar.<br/>
+• Örnek: "sonraki adıma birleş"<br/>
+<br/>
+<strong>✋ Manuel İşlem</strong><br/>
+• Otomatik olmayan, manuel yapılan adımlar.<br/>
+• Örnek: "belgeyi imzala", "fiziksel kontrol yap"<br/>
 <br/>
 <strong>🔁 Döngü</strong><br/>
 • Tekrarlayan işlemler için kullanılır.<br/>
@@ -4597,6 +5094,18 @@ def render_help_panel(container: st.delta_generator.DeltaGenerator) -> None:
 <strong>💾 Veritabanı</strong><br/>
 • Veri saklama veya veri tabanı işlemleri için kullanılır.<br/>
 • Örnek: "veritabanına kaydet", "kayıtları oku"<br/>
+<br/>
+<strong>🗃️ Veri Deposu</strong><br/>
+• Kalıcı veri saklama (dosya/medya/arşiv).<br/>
+• Örnek: "dosyaya kaydet", "arşive yaz"<br/>
+<br/>
+<strong>🧠 Dahili Depo</strong><br/>
+• Bellek içi/geçici saklama adımları.<br/>
+• Örnek: "RAM'e al", "önbelleğe yaz"<br/>
+<br/>
+<strong>📼 Bant Veri</strong><br/>
+• Sıralı erişimli saklama (manyetik bant).<br/>
+• Örnek: "bant arşivine yaz"<br/>
 <br/>
 <strong>🔗 Bağlantı</strong><br/>
 • Sayfa geçişleri veya uzak bağlantılar için kullanılır.<br/>
@@ -4622,7 +5131,7 @@ def render_help_panel(container: st.delta_generator.DeltaGenerator) -> None:
 • Akış Şeması Görünümü: Basit / Uzman modu.<br/>
 • Dışa Aktar: Mermaid, PNG, SVG, JSON, PDF hazırlayıp indir.<br/>
 • Proje Yönetimi: Proje adı, kaydet/yeni, dosya yükle.<br/>
-• Şablon Kütüphanesi: Hazır akış şablonları.<br/>
+• Örnek akışlardan ilham alarak kendi şemanızı oluşturun.<br/>
 • Uzman modunda ek araçlar: Rubrik, doğrulama, kontrol listesi.<br/>
 <br/>
 <strong>Sağ Menü (Düğüm / Bağlantı / Kod / Ayarlar)</strong><br/>
@@ -4722,7 +5231,7 @@ def render_sidebar() -> None:
                     except Exception as exc:
                         toast_error(f"Dosya yüklenemedi: {exc}")
 
-        if st.session_state.get("show_templates", True):
+        if st.session_state.get("show_templates", False):
             with st.expander("🧩 Şablon Kütüphanesi", expanded=True):
                 st.text_input("Şablon Ara", key="template_search", placeholder="Örn: döngü, karar, sistem")
                 search = (st.session_state.get("template_search") or "").strip().lower()
@@ -4823,19 +5332,60 @@ def clean_ai_code(code: str) -> str:
     return "\n".join(lines[start_idx:])
 
 
+def topic_requires_io(topic: str) -> bool:
+    """Konu metninden IO düğümü gereksinimini kaba olarak çıkarır."""
+    text = (topic or "").strip().lower()
+    text = re.sub(r"\s+", " ", text)
+    return any(hint in text for hint in AI_IO_HINTS)
+
+
+def get_required_kinds_for_topic(topic: str) -> set[str]:
+    required = set(AI_REQUIRED_BASE)
+    if topic_requires_io(topic):
+        required.add("io")
+    return required
+
+
+def get_ai_min_nodes_for_topic(topic: str) -> int:
+    return AI_MIN_NODES_WITH_IO if topic_requires_io(topic) else AI_MIN_NODES_BASE
+
+
+def action_pool_for_topic(topic: str) -> List[str]:
+    """Konuya göre anlamlı işlem etiket havuzu döndürür."""
+    text = normalize_label_text(topic).lower()
+    if not text:
+        return list(DEFAULT_ACTION_POOL)
+
+    if any(k in text for k in ["okul", "okula", "gidiş", "gidis", "servis"]):
+        return ["Uyan", "Hazırlan", "Kahvaltı Yap", "Çantayı Al", "Yola Çık", "Okula Var"]
+    if any(k in text for k in ["alışveriş", "alisveris", "market", "sipariş", "siparis", "kargo"]):
+        return ["Liste Hazırla", "Ürün Seç", "Sepete Ekle", "Kasaya Git", "Ödeme Yap", "Teslim Al"]
+    if any(k in text for k in ["giriş", "giris", "login", "oturum"]):
+        return ["Kullanıcıyı Doğrula", "Şifre Gir", "Erişim Ver", "Hata Göster"]
+    if any(k in text for k in ["kayıt", "kayit", "başvuru", "basvuru"]):
+        return ["Bilgi Topla", "Form Doldur", "Belgeleri Yükle", "Onayla", "Başvuruyu Gönder"]
+    if any(k in text for k in ["randevu", "rezervasyon", "booking"]):
+        return ["Uygunluğu Kontrol Et", "Tarih Seç", "Onayla", "Bildirim Gönder"]
+    if any(k in text for k in ["stok", "depo", "envanter"]):
+        return ["Stok Kontrol Et", "Sipariş Ver", "Güncelle", "Raporla"]
+    if any(k in text for k in ["ödeme", "odeme", "fatura", "tahsil"]):
+        return ["Tutar Hesapla", "Ödeme Al", "Makbuz Oluştur", "Kaydı Güncelle"]
+    if any(k in text for k in ["robot", "temizlik", "süpürge", "supurge"]):
+        return ["Alanı Tara", "Rota Planla", "Temizliği Başlat", "Şarj Ol"]
+
+    return list(DEFAULT_ACTION_POOL)
+
+
 def parse_ai_flow_or_fallback(code: str, topic: str) -> Tuple[Optional[StreamlitFlowState], str, Optional[str]]:
-    """AI çıktısını parse eder; hatada güvenli şablona düşer."""
+    """AI çıktısını parse eder; hatada açıklayıcı hata döndürür."""
     code = (code or "").strip()
     code = clean_ai_code(code)
     if not code:
-        code = build_required_flow_template(topic)
+        return None, DEFAULT_DIRECTION, "AI çıktısı boş."
 
     parsed_state, error, direction = parse_mermaid(code)
     if error or parsed_state is None:
-        code = build_required_flow_template(topic)
-        parsed_state, error, direction = parse_mermaid(code)
-        if error or parsed_state is None:
-            return None, direction, error or "Geçersiz Mermaid kodu"
+        return None, direction, error or "Geçersiz Mermaid kodu"
 
     enforce_connected_flow(parsed_state)
     polish_ai_labels(parsed_state, topic)
@@ -4844,17 +5394,12 @@ def parse_ai_flow_or_fallback(code: str, topic: str) -> Tuple[Optional[Streamlit
     ensure_decision_edge_labels(parsed_state)
 
     kinds = {get_node_kind(n) for n in parsed_state.nodes}
-    required = set(AI_REQUIRED_KINDS)
-    if len(parsed_state.nodes) < AI_MIN_NODES or not required.issubset(kinds):
-        code = build_required_flow_template(topic)
-        parsed_state, error, direction = parse_mermaid(code)
-        if error or parsed_state is None:
-            return None, direction, "Şablon uygulanamadı."
-        enforce_connected_flow(parsed_state)
-        polish_ai_labels(parsed_state, topic)
-        repair_ai_kinds(parsed_state)
-        simplify_flow_state(parsed_state)
-        ensure_decision_edge_labels(parsed_state)
+    required = get_required_kinds_for_topic(topic)
+    min_nodes = get_ai_min_nodes_for_topic(topic)
+    if len(parsed_state.nodes) < min_nodes or not required.issubset(kinds):
+        toast_warning(
+            "AI çıktısı minimum kriterleri karşılamadı; şablon uygulanmadı, mevcut çıktı düzenlendi."
+        )
 
     return parsed_state, direction, None
 
@@ -4870,7 +5415,7 @@ def extract_free_nodes_from_state(flow_state: StreamlitFlowState) -> List[Dict[s
 
 
 def apply_ai_flow_template(code: str, topic: str, name: str = "AI Şema") -> None:
-    """AI şema çıktısını uygular; hatada güvenli şablona düşer."""
+    """AI şema çıktısını uygular; hatada kullanıcıya mesaj gösterir."""
     parsed_state, direction, error = parse_ai_flow_or_fallback(code, topic)
     if error or parsed_state is None:
         toast_error(f"AI çıktısı işlenemedi: {error or 'Geçersiz Mermaid kodu'}.")
@@ -4907,23 +5452,23 @@ def normalize_label_text(label: str) -> str:
 def guess_kind_from_label(label: str) -> str:
     """Basit anahtar kelime ile düğüm tipini tahmin et."""
     text = normalize_label_text(label).lower()
-    if any(w in text for w in ["başla", "başlangıç", "bitir", "bitti", "son"]):
+    if any(w in text for w in ["başla", "başlangıç", "bitir", "bitti", "son", "start", "begin", "end", "stop", "finish", "entry", "exit"]):
         return "terminal"
-    if "?" in label or any(w in text for w in ["mı", "mi", "mu", "mü", "durum", "koşul"]):
+    if "?" in label or any(w in text for w in ["mı", "mi", "mu", "mü", "durum", "koşul", "decision", "condition", "check", "if"]):
         return "decision"
-    if any(w in text for w in ["giriş", "çıktı", "girdi", "oku", "yaz", "al", "gir"]):
+    if any(w in text for w in ["giriş", "çıktı", "girdi", "oku", "yaz", "al", "gir", "input", "output", "read", "write", "enter"]):
         return "io"
-    if any(w in text for w in ["veritabanı", "kayıt", "db", "tablo", "sakla"]):
+    if any(w in text for w in ["veritabanı", "kayıt", "db", "tablo", "sakla", "database", "storage", "store"]):
         return "database"
-    if any(w in text for w in ["alt süreç", "alt adım", "alt işlem"]):
+    if any(w in text for w in ["alt süreç", "alt adım", "alt işlem", "subprocess", "sub-process", "subroutine"]):
         return "subprocess"
-    if any(w in text for w in ["fonksiyon", "çağır", "çağrısı"]):
+    if any(w in text for w in ["fonksiyon", "çağır", "çağrısı", "function", "call"]):
         return "function"
-    if any(w in text for w in ["not", "açıklama", "bilgi", "ipucu"]):
+    if any(w in text for w in ["not", "açıklama", "bilgi", "ipucu", "note", "comment", "remark"]):
         return "comment"
     if any(w in text for w in ["döngü", "tekrar", "yeniden", "loop"]):
         return "loop"
-    if any(w in text for w in ["bağlantı", "konnektör", "devam noktası"]):
+    if any(w in text for w in ["bağlantı", "konnektör", "devam noktası", "connector", "link", "goto"]):
         return "connector"
     return "process"
 
@@ -5043,20 +5588,56 @@ def render_node_panel(container: st.delta_generator.DeltaGenerator) -> None:
     width = parse_style_width(getattr(node, "style", {}), 160)
 
     new_label = container.text_input("Düğüm Metni", value=label, help="Düğümde görünecek metin.")
+    kind_options = list(NODE_KIND_ORDER)
+    default_kind = kind if kind in NODE_KIND else "process"
     new_kind = container.selectbox(
         "Düğüm Tipi",
-        list(NODE_KIND.keys()),
-        index=list(NODE_KIND.keys()).index(kind) if kind in NODE_KIND else 1,
-        format_func=lambda k: NODE_KIND[k]["label"],
+        kind_options,
+        index=kind_options.index(default_kind) if default_kind in kind_options else 0,
+        format_func=lambda k: node_kind_label(k),
         help="Düğümün türünü seçin.",
     )
     new_width = container.slider("Düğüm Boyutu", 100, 320, value=width, step=10, help="Düğüm genişliği.")
+
+    spec = NODE_KIND.get(new_kind, NODE_KIND["process"])
+    data = getattr(node, "data", None) or {}
+    current_colors = normalize_color_overrides(data.get("colors") if isinstance(data, dict) else None)
+    if st.session_state.get("global_node_colors_enabled"):
+        container.caption(
+            "Global renkler aktif. Buradaki özel renkler yalnızca global kapatıldığında görünür."
+        )
+    use_custom_colors = container.checkbox(
+        "Özel Renk Kullan",
+        value=bool(current_colors),
+        key=f"node_custom_colors_{selected_id}",
+        help="Açıkken arka plan, kenarlık ve yazı rengini özelleştirebilirsiniz.",
+    )
+    colors_payload: Optional[Dict[str, str]]
+    if use_custom_colors:
+        new_bg = container.color_picker(
+            "Arka Plan",
+            value=current_colors.get("bg") or spec["bg"],
+            key=f"node_color_bg_{selected_id}",
+        )
+        new_border = container.color_picker(
+            "Kenarlık",
+            value=current_colors.get("border") or spec["border"],
+            key=f"node_color_border_{selected_id}",
+        )
+        new_text = container.color_picker(
+            "Yazı",
+            value=current_colors.get("text") or spec["text"],
+            key=f"node_color_text_{selected_id}",
+        )
+        colors_payload = {"bg": new_bg, "border": new_border, "text": new_text}
+    else:
+        colors_payload = {}
 
     col_u, col_d = container.columns(2)
     with col_u:
         if col_u.button("Güncelle", use_container_width=True, key=f"node_update_{selected_id}"):
             src_pos, tgt_pos = default_handle_positions(st.session_state.direction)
-            update_node(selected_id, new_label, new_kind, new_width, src_pos, tgt_pos)
+            update_node(selected_id, new_label, new_kind, new_width, src_pos, tgt_pos, colors=colors_payload)
             st.rerun()
     with col_d:
         if col_d.button("Sil", use_container_width=True, type="secondary", key=f"node_delete_{selected_id}"):
@@ -5072,18 +5653,7 @@ def render_edge_panel(container: st.delta_generator.DeltaGenerator) -> None:
     edges = st.session_state.flow_state.edges
     edge_ids = [e.id for e in edges]
 
-    if st.session_state.selected_edge_id:
-        edge = find_edge(st.session_state.selected_edge_id)
-        if edge is not None:
-            if st.session_state.last_quick_edge_id != st.session_state.selected_edge_id:
-                st.session_state.quick_edge_label = get_edge_label(edge)
-                st.session_state.last_quick_edge_id = st.session_state.selected_edge_id
-            container.text_input(
-                "⚡ Bağlantı Metni (Hızlı)",
-                key="quick_edge_label",
-                help="Enter ile hızlı güncelle",
-                on_change=apply_quick_edge_label,
-            )
+    # Tek bağlantı etiketi kullanılır (hızlı alan kaldırıldı)
 
     if not edge_ids:
         container.info("Henüz bağlantı yok. Aşağıdan yeni bağlantı ekleyin.")
@@ -5102,7 +5672,7 @@ def render_edge_panel(container: st.delta_generator.DeltaGenerator) -> None:
             label = get_edge_label(edge)
             etype = get_edge_type(edge)
             variant = get_edge_variant(edge)
-            edge_type_labels = list(EDGE_STYLE_OPTIONS.keys())
+            edge_type_labels = list(EDGE_STYLE_ORDER)
             current_type_label = edge_style_label(etype, variant)
 
             if st.session_state.get("edge_form_id") != selected_id:
@@ -5112,6 +5682,7 @@ def render_edge_panel(container: st.delta_generator.DeltaGenerator) -> None:
                 "Bağlantı Metni",
                 key="edge_label_input",
                 help="Bağlantı üzerinde görünecek metin.",
+                on_change=apply_edge_label_input,
             )
             if st.session_state.get("allow_edge_style", True):
                 new_type_label = container.selectbox(
@@ -5205,9 +5776,14 @@ def render_edge_builder(container: st.delta_generator.DeltaGenerator, show_heade
         key="edge_builder_tgt",
     )
 
-    edge_type_labels = list(EDGE_STYLE_OPTIONS.keys())
+    edge_type_labels = list(EDGE_STYLE_ORDER)
     if st.session_state.get("allow_edge_style", True):
-        etype_label = container.selectbox("Bağlantı Tipi", edge_type_labels, index=0, key="edge_builder_type")
+        etype_label = container.selectbox(
+            "Bağlantı Tipi",
+            edge_type_labels,
+            index=0,
+            key="edge_builder_type",
+        )
     else:
         etype_label = "🟢 Yumuşak"
     color_labels = ["Otomatik (türe göre)"] + list(EDGE_COLOR_OPTIONS.keys())
@@ -5337,8 +5913,6 @@ def render_pending_edge_prompt(container: st.delta_generator.DeltaGenerator) -> 
                     get_edge_variant(edge),
                 )
                 st.session_state.selected_edge_id = edge_id
-                st.session_state.quick_edge_label = label
-                st.session_state.last_quick_edge_id = edge_id
                 st.session_state.edge_form_id = edge_id
                 st.session_state.edge_label_input = label
                 st.session_state.pending_edge_id = None
@@ -5417,7 +5991,7 @@ def render_toolbar(container: st.delta_generator.DeltaGenerator) -> None:
     tip = TIPS[tip_idx] if TIPS else "İpucu bulunamadı."
     container.info(f"💡 **Nasıl kullanılır:** {tip}", icon="ℹ️")
 
-    allowed = st.session_state.get("allowed_palette", list(NODE_KIND.keys()))
+    allowed = st.session_state.get("allowed_palette", list(NODE_KIND_ORDER))
     controls = container.columns([1, 1, 1, 1], gap="small")
 
     def label_with_icon(kind: str, label: str) -> str:
@@ -5492,8 +6066,17 @@ def render_toolbar(container: st.delta_generator.DeltaGenerator) -> None:
         ("io", "Giriş/Çıkış", "Veri al / yaz"),
         ("process", "İşlem", "Hesaplama / atama"),
         ("decision", "Karar", "Koşul kontrolü"),
+        ("document", "Belge", "Tek belge / çıktı"),
+        ("multi_document", "Çoklu Belgeler", "Birden fazla belge"),
+        ("data_storage", "Veri Deposu", "Kalıcı veri saklama"),
+        ("internal_storage", "Dahili Depo", "Bellek içi depolama"),
+        ("tape_data", "Bant Veri", "Sıralı erişimli kayıt"),
         ("subprocess", "Alt Süreç", "Fonksiyon / alt adım"),
         ("database", "Veritabanı", "Veri saklama"),
+        ("display", "Görüntü", "Ekran/çıktı gösterimi"),
+        ("manual_input", "Manuel Giriş", "Klavyeden/elden giriş"),
+        ("manual_operation", "Manuel İşlem", "Elle yapılan işlem"),
+        ("merge", "Birleştir", "Akışları birleştir"),
         ("connector", "Bağlantı", "Bağlantı noktası"),
         ("comment", "Not", "Açıklama / not"),
         ("loop", "Döngü", "Döngü bloğu"),
